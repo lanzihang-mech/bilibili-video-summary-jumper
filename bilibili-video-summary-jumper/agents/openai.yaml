@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bilibili Video Summary Jumper"
+  short_description: "Generate timestamp-jump HTML summaries for Bilibili videos."
+  default_prompt: "Generate a visual HTML summary with timestamp links for this Bilibili video."
