@@ -3,7 +3,7 @@
 Inputs:
 
 - A local MP4 file supplied by the user.
-- The matching original Bilibili URL for jump links.
+- Optional original Bilibili URL only when the user explicitly wants external jump links.
 
 Outputs:
 
@@ -11,8 +11,8 @@ Outputs:
 - `transcript.json`: normalized subtitle cues.
 - `frames/*.jpg`: timestamped screenshots.
 - `frames/frames.json`: frame manifest.
-- `video-summary.md`: editable summary with evidence.
-- `video-summary.html`: visual page with local-video jump buttons.
+- `video-summary.md`: editable learning-note summary with evidence.
+- `video-summary.html`: visual learning-note page with local-video jump buttons.
 
 Operational notes:
 
@@ -22,3 +22,5 @@ Operational notes:
 - If audio libraries fail on non-ASCII paths, copy intermediate audio to an ASCII temporary directory internally.
 - Do not auto-read browser cookies and do not download source media from Bilibili.
 - Use Bilibili external links only when the user explicitly asks for `--jump-target bilibili`.
+- The Markdown summary layer should first explain what the video is doing, then attach timestamps and screenshots as evidence. Do not use raw subtitle chunks as the main summary.
+- Keep the HTML reading order beginner-friendly: local video, rewritten summary, core points, segment explanations, next actions, then timeline evidence.

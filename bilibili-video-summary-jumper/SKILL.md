@@ -5,7 +5,7 @@ description: Build jumpable local-video summary artifacts from a user-provided M
 
 # Bilibili Video Summary Jumper
 
-Use this skill when the user provides a local MP4. The skill creates transcript evidence, frame evidence, a Markdown summary, and a standalone HTML page whose buttons jump within the local video.
+Use this skill when the user provides a local MP4. The skill creates transcript evidence, frame evidence, a beginner-friendly Markdown learning note, and a standalone HTML page whose buttons jump within the local video.
 
 ## Workflow
 
@@ -18,14 +18,16 @@ python scripts/run_pipeline.py "<video.mp4>" --output-dir out/<slug>
 2. The pipeline performs:
    - `transcribe_mp4.py`: extract audio from the MP4 and create `video.srt` plus `transcript.json` with `faster-whisper`.
    - `extract_frames.py`: capture timestamped `.jpg` frames from the MP4 using the SRT timeline.
-   - `build_summary_md.py`: create `video-summary.md` from transcript chunks and frame references.
-   - `build_jump_html.py`: render `video-summary.html` with a local video player and timestamp jump buttons.
+   - `build_summary_md.py`: create `video-summary.md` by cleaning ASR text, grouping semantic sections, and rewriting the result as learning notes.
+   - `build_jump_html.py`: render `video-summary.html` with a local video player, learning-note summary, screenshot evidence, and timestamp jump buttons.
 
 3. Verify the result:
    - HTML should include one local `<video>` player.
    - Every timeline/evidence card must have a `data-time` jump button.
    - Do not use Bilibili web links unless the user explicitly asks for `--jump-target bilibili`.
-   - Markdown should include video info, overview, chapters, timeline evidence, key points, and reusable citations.
+   - Markdown should include `一句话总结`, `适合谁看`, `这段视频解决的问题`, `核心观点`, `分段讲解`, `新手下一步行动`, and `时间线索引`.
+   - The main summary should explain the video in fresh language. Timeline evidence should support the summary, not replace it.
+   - Run `python scripts/quick_validate.py out/<slug>` after generating the final artifacts.
 
 ## Step Commands
 
@@ -67,6 +69,7 @@ python scripts/build_jump_html.py out/<slug>/video-summary.md --local-video "<vi
 - `scripts/run_pipeline.py`: complete MP4-to-HTML workflow.
 - `scripts/transcribe_mp4.py`: MP4 audio extraction and local ASR.
 - `scripts/extract_frames.py`: timestamped screenshot extraction.
-- `scripts/build_summary_md.py`: Markdown summary generation.
-- `scripts/build_jump_html.py`: Markdown-to-HTML renderer with Bilibili timestamp links.
+- `scripts/build_summary_md.py`: learning-note Markdown summary generation.
+- `scripts/build_jump_html.py`: Markdown-to-HTML renderer with local timestamp jump controls.
+- `scripts/quick_validate.py`: static validation for Markdown and HTML output shape.
 - `references/workflow.md`: implementation notes and troubleshooting.
