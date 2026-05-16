@@ -27,5 +27,6 @@ Local ASR fallback:
 - Use ASR only when public subtitles and user-provided SRT/VTT are unavailable.
 - Extract audio only, never video frames, with `yt-dlp` and `ffmpeg`; `imageio-ffmpeg` can provide a Python-packaged ffmpeg fallback.
 - Prefer `faster-whisper` for local transcription; `openai-whisper` is an alternate engine.
+- Default `faster-whisper` settings are CPU `int8` for broad Windows compatibility. Use CUDA only when the machine has working CUDA libraries.
 - Delete temporary audio by default. Keep audio only when the user explicitly asks for reusable cache or audit artifacts.
 - For multi-part videos, transcribe one specified part at a time with `?p=` and `--page`.

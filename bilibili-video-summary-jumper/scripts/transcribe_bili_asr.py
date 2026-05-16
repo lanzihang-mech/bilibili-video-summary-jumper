@@ -97,13 +97,19 @@ def download_audio(
     return audio_files[0]
 
 
-def transcribe_with_faster_whisper(audio_path: Path, model_size: str, language: str | None) -> list[dict[str, object]]:
+def transcribe_with_faster_whisper(
+    audio_path: Path,
+    model_size: str,
+    language: str | None,
+    device: str,
+    compute_type: str,
+) -> list[dict[str, object]]:
     try:
         from faster_whisper import WhisperModel
     except ImportError as exc:
         raise RuntimeError("Missing faster-whisper. Install with: python -m pip install faster-whisper") from exc
 
-    model = WhisperModel(model_size, device="auto", compute_type="default")
+    model = WhisperModel(model_size, device=device, compute_type=compute_type)
     segments_iter, _info = model.transcribe(str(audio_path), language=language, vad_filter=True)
     segments: list[dict[str, object]] = []
     for segment in segments_iter:
@@ -169,6 +175,8 @@ def main() -> int:
     parser.add_argument("--model", default="small", help="ASR model size, e.g. tiny/base/small/medium")
     parser.add_argument("--language", default="zh", help="ASR language code; use empty string for auto")
     parser.add_argument("--engine", choices=["faster-whisper", "whisper"], default="faster-whisper")
+    parser.add_argument("--device", default="cpu", help="faster-whisper device, e.g. cpu/cuda/auto")
+    parser.add_argument("--compute-type", default="int8", help="faster-whisper compute type, e.g. int8/float32/float16")
     parser.add_argument("--keep-audio", action="store_true", help="Keep extracted temporary audio")
     args = parser.parse_args()
 
@@ -200,7 +208,7 @@ def main() -> int:
     try:
         audio_path = download_audio(args.url, audio_root, yt_dlp, ffmpeg, args.cookies, args.page)
         if args.engine == "faster-whisper":
-            segments = transcribe_with_faster_whisper(audio_path, args.model, language)
+            segments = transcribe_with_faster_whisper(audio_path, args.model, language, args.device, args.compute_type)
         else:
             segments = transcribe_with_openai_whisper(audio_path, args.model, language)
         if not segments:

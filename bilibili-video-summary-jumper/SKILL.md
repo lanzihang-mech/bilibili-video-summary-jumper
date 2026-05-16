@@ -60,6 +60,7 @@ python scripts/build_bili_catalog_html.py "https://www.bilibili.com/video/BV..."
 
 - Required for automatic subtitle fetch: `yt-dlp`.
 - Required for local ASR: `yt-dlp`, `ffmpeg` (or `imageio-ffmpeg`), and either `faster-whisper` or `openai-whisper`.
+- Local ASR defaults to CPU `int8`; use `--device cuda --compute-type float16` only when CUDA is installed and working.
 - Default ASR behavior uses temporary audio and deletes it after generating SRT, JSON, and HTML.
 - Do not read browser cookies automatically. If login state is needed, only use a cookie file explicitly exported and provided by the user through `--cookies`.
 - For multi-part videos, prefer a specific `?p=` URL and pass `--page`; do not transcribe a long playlist unless the user explicitly asks for it.
