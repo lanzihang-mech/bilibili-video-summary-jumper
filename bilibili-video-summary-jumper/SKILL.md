@@ -1,83 +1,72 @@
 ---
 name: bilibili-video-summary-jumper
-description: Generate visual single-file HTML summaries for Bilibili videos with timestamp links back to the original Bilibili page. Use when Codex is asked to summarize a Bilibili video, create a video timeline, make a jumpable HTML summary, process Bilibili subtitles, or build a non-embedded video summary page from Bilibili subtitles and timestamps.
+description: Build jumpable local-video summary artifacts from a user-provided MP4. Use when Codex is asked to process an MP4 video into SRT subtitles, timestamped screenshots, a Markdown video summary, and a visual HTML summary whose controls jump within the local video at matching timestamps.
 ---
 
 # Bilibili Video Summary Jumper
 
-Create a single HTML summary for a Bilibili video without downloading or embedding the source video. The output should make the transcript skimmable and every important moment should link back to the original Bilibili video at the right timestamp.
+Use this skill when the user provides a local MP4. The skill creates transcript evidence, frame evidence, a Markdown summary, and a standalone HTML page whose buttons jump within the local video.
 
 ## Workflow
 
-1. Fetch or create subtitles.
-   - First run `scripts/fetch_bili_subtitles.py`; it checks Bilibili's public subtitle API and then `yt-dlp`.
-   - If the user already has SRT/VTT from vCaptions or `bili-subtitle-copier`, skip fetching and use that file directly.
-   - If no subtitle is available, run `scripts/transcribe_bili_asr.py` to extract temporary audio and generate timestamped subtitles with local ASR.
-   - For multi-part videos where ASR would be too slow, use `scripts/build_bili_catalog_html.py` to create a navigable catalog summary from public Bilibili metadata, then transcribe specific `?p=` parts later.
-   - Do not download, embed, mirror, or redistribute the video.
-2. Build the HTML with `scripts/build_summary_html.py`.
-   - Pass the Bilibili video URL, subtitle file, title, and output path.
-   - Use the generated normalized transcript JSON when deeper AI summarization is needed.
-   - Keep timestamp links as external links to Bilibili with `t=<seconds>`.
-3. Improve the generated summary when useful.
-   - Read the normalized transcript JSON.
-   - Replace or supplement the heuristic overview, chapter labels, and key points.
-   - Preserve all jump links and source timestamps.
-4. Verify the output.
-   - Open or inspect the HTML.
-   - Confirm important cards have Bilibili links with `t=` and that `p=` is preserved for multi-part URLs.
-   - Confirm no original video is embedded in the HTML.
-
-## Quick Commands
-
-Fetch subtitles:
+1. Run the full pipeline unless the user asks for a single step:
 
 ```bash
-python scripts/fetch_bili_subtitles.py "https://www.bilibili.com/video/BV..." --output-dir out
+python scripts/run_pipeline.py "<video.mp4>" --output-dir out/<slug>
 ```
 
-Generate subtitles and HTML with local ASR when no subtitle exists:
+2. The pipeline performs:
+   - `transcribe_mp4.py`: extract audio from the MP4 and create `video.srt` plus `transcript.json` with `faster-whisper`.
+   - `extract_frames.py`: capture timestamped `.jpg` frames from the MP4 using the SRT timeline.
+   - `build_summary_md.py`: create `video-summary.md` from transcript chunks and frame references.
+   - `build_jump_html.py`: render `video-summary.html` with a local video player and timestamp jump buttons.
+
+3. Verify the result:
+   - HTML should include one local `<video>` player.
+   - Every timeline/evidence card must have a `data-time` jump button.
+   - Do not use Bilibili web links unless the user explicitly asks for `--jump-target bilibili`.
+   - Markdown should include video info, overview, chapters, timeline evidence, key points, and reusable citations.
+
+## Step Commands
+
+Transcribe only:
 
 ```bash
-python scripts/transcribe_bili_asr.py "https://www.bilibili.com/video/BV...?p=3" --page 3 --title "Video title" --output-dir out/asr
+python scripts/transcribe_mp4.py "<video.mp4>" --output-dir out/<slug> --model small
 ```
 
-Build HTML from a subtitle file:
+Extract frames only:
 
 ```bash
-python scripts/build_summary_html.py "https://www.bilibili.com/video/BV...?p=2" out/subtitle.vtt --title "Video title" --output out/summary.html
+python scripts/extract_frames.py "<video.mp4>" out/<slug>/video.srt --output-dir out/<slug>/frames
 ```
 
-If automatic fetching fails, save copied SRT/VTT text to a file and run `build_summary_html.py` directly.
-
-Build a fallback catalog summary from Bilibili metadata:
+Build Markdown only:
 
 ```bash
-python scripts/build_bili_catalog_html.py "https://www.bilibili.com/video/BV..." --output out/catalog-summary.html
+python scripts/build_summary_md.py out/<slug>/video.srt --frames out/<slug>/frames --video-title "Video title" --output out/<slug>/video-summary.md
 ```
 
-## Dependencies and Safety
+Build HTML only:
 
-- Required for automatic subtitle fetch: `yt-dlp`.
-- Required for local ASR: `yt-dlp`, `ffmpeg` (or `imageio-ffmpeg`), and either `faster-whisper` or `openai-whisper`.
-- Local ASR defaults to CPU `int8`; use `--device cuda --compute-type float16` only when CUDA is installed and working.
-- Default ASR behavior uses temporary audio and deletes it after generating SRT, JSON, and HTML.
-- Do not read browser cookies automatically. If login state is needed, only use a cookie file explicitly exported and provided by the user through `--cookies`.
-- For multi-part videos, prefer a specific `?p=` URL and pass `--page`; do not transcribe a long playlist unless the user explicitly asks for it.
+```bash
+python scripts/build_jump_html.py out/<slug>/video-summary.md --local-video "<video.mp4>" --output out/<slug>/video-summary.html
+```
 
-## Output Standards
+## Defaults
 
-- Generate one self-contained `.html` file.
-- Include video metadata, a 3-5 sentence overview, chapter navigation, timestamp cards, key points, and a copyable citation area.
-- Make timestamps obvious: every timeline card must show the source time and a "跳转" style action.
-- Keep the layout dense enough for review work, not a landing page.
-- Do not embed `<video>`, `<iframe>`, or copied video media.
+- ASR model: `small`.
+- ASR device: CPU.
+- ASR compute type: `int8`.
+- Frame interval: about one frame every 30 seconds, anchored to transcript timestamps.
+- Output target: local video player jump buttons.
+- Source media: user-provided MP4 only. Do not fetch or download Bilibili media.
 
 ## Resources
 
-- `scripts/fetch_bili_subtitles.py`: detects and downloads available Bilibili subtitles via `yt-dlp`.
-- `scripts/build_summary_html.py`: parses SRT/VTT, normalizes timestamps, and renders the HTML.
-- `scripts/build_bili_catalog_html.py`: fallback renderer for multi-part videos with no public subtitles.
-- `scripts/transcribe_bili_asr.py`: local ASR fallback that extracts temporary audio and generates SRT, JSON, and HTML.
-- `assets/template.html`: single-file visual summary template.
-- `references/subtitle-sources.md`: fallback subtitle source notes and troubleshooting.
+- `scripts/run_pipeline.py`: complete MP4-to-HTML workflow.
+- `scripts/transcribe_mp4.py`: MP4 audio extraction and local ASR.
+- `scripts/extract_frames.py`: timestamped screenshot extraction.
+- `scripts/build_summary_md.py`: Markdown summary generation.
+- `scripts/build_jump_html.py`: Markdown-to-HTML renderer with Bilibili timestamp links.
+- `references/workflow.md`: implementation notes and troubleshooting.
